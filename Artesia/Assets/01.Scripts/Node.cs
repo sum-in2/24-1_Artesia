@@ -33,4 +33,5 @@ public class Node
         }
         return roomRect.Overlaps(otherRect);
     }
+    public bool isLeaf => leftNode == null && rightNode == null; // 이거 추가!
 }

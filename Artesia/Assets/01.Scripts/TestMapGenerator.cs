@@ -5,9 +5,9 @@ using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 using Random = UnityEngine.Random;
 
-public class MapGenerator : MonoBehaviour
+public class TestMapGenerator : MonoBehaviour
 {
-    static MapGenerator m_instance; // 싱글톤
+    static TestMapGenerator m_instance; // 싱글톤
     [SerializeField] Vector2Int mapSize;
     [SerializeField] float minDevideRate;
     [SerializeField] float maxDevideRate;
@@ -30,7 +30,7 @@ public class MapGenerator : MonoBehaviour
     {
         get { return StartRoom; }
     }
-    public static MapGenerator instance
+    public static TestMapGenerator instance
     {
         get
         {
@@ -275,5 +275,50 @@ public class MapGenerator : MonoBehaviour
         TileInfoArray[y, x] = (int)TypeEnum;
     }
 
+    void OnDrawGizmos()
+    {
+        if (TileInfoArray == null) return;
+        for (int y = 0; y < mapSize.y; y++)
+            for (int x = 0; x < mapSize.x; x++)
+            {
+                Gizmos.color = TileInfoArray[y, x] switch
+                {
+                    0 => Color.black,  // Out
+                    1 => Color.green,  // Room
+                    2 => Color.gray,   // Wall
+                    3 => Color.yellow, // Stair
+                    _ => Color.red
+                };
+                Gizmos.DrawCube(new Vector3(x - mapSize.x / 2, y - mapSize.y / 2, 0),
+                              Vector3.one * 0.8f);
+            }
+    }
+
+    void DrawNodeDivideLine(Node node)
+    {
+        if (node.parNode == null) return; // 루트 노드는 제외
+        // 부모 노드와의 분할 위치 계산
+        RectInt parentRect = node.parNode.nodeRect;
+        Vector3Int worldPos = new Vector3Int(
+            (int)parentRect.center.x - mapSize.x / 2,
+            0,
+            (int)parentRect.center.y - mapSize.y / 2
+        );
+
+        Gizmos.color = Color.cyan;
+
+        if (parentRect.width > parentRect.height) // 가로 분할
+        {
+            Vector3 start = new Vector3(worldPos.x - parentRect.width / 2f, 0, worldPos.z);
+            Vector3 end = new Vector3(worldPos.x + parentRect.width / 2f, 0, worldPos.z);
+            Gizmos.DrawLine(start, end);
+        }
+        else // 세로 분할
+        {
+            Vector3 start = new Vector3(worldPos.x, 0, worldPos.z - parentRect.height / 2f);
+            Vector3 end = new Vector3(worldPos.x, 0, worldPos.z + parentRect.height / 2f);
+            Gizmos.DrawLine(start, end);
+        }
+    }
 }
 
