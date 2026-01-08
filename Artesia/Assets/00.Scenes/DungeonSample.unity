@@ -38,7 +38,6 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0, g: 0, b: 0, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -1227,8 +1226,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1685033539}
-  - component: {fileID: 1685033538}
   - component: {fileID: 1685033537}
+  - component: {fileID: 1685033540}
   m_Layer: 0
   m_Name: MapObject
   m_TagString: Map
@@ -1255,23 +1254,6 @@ MonoBehaviour:
   stairTile: {fileID: 11400000, guid: d3d0aeb31ad29f94fa3a3d15774cabe5, type: 2}
   minimapGrid: {fileID: 1894299109}
   minimapTile: {fileID: 11400000, guid: 3211b796c47fc5d499d6cbecd4fb55c5, type: 2}
---- !u!114 &1685033538
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1685033536}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c5c2b54675247b943b8eceedcb393645, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  mapSize: {x: 48, y: 27}
-  minDevideRate: 0.3
-  maxDevideRate: 0.7
-  maxDepth: 3
-  maxRoomSize: {x: 7, y: 7}
 --- !u!4 &1685033539
 Transform:
   m_ObjectHideFlags: 0
@@ -1288,6 +1270,23 @@ Transform:
   - {fileID: 1097262543}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1685033540
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1685033536}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f7cbebabd6fe264caeb6489c02016d2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mapSize: {x: 48, y: 27}
+  minDevideRate: 0.3
+  maxDevideRate: 0.7
+  maxDepth: 4
+  maxRoomSize: {x: 7, y: 7}
 --- !u!1 &1824615809
 GameObject:
   m_ObjectHideFlags: 0

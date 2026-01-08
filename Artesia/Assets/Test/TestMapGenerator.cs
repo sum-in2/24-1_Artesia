@@ -217,6 +217,8 @@ public class TestMapGenerator : MonoBehaviour
 
     private void GenerateRoad(Node Tree, int n)
     {
+        //TODO: 현재 방식은 좌 우 하위 노드만 연결하기 때문에 늘 하단에만 길이 생성되는 것으로 추정됨
+        //방 정보들 다 담아서 인접 방 랜덤 연결/이것도 최소 모든 방 순회 할 수 있는 방식으로 수정 필요
         if (n == maxDepth) return;
 
         Vector2Int currentCenter = new Vector2Int((Tree.leftNode.center.x + Tree.rightNode.center.x) / 2, (Tree.leftNode.center.y + Tree.rightNode.center.y) / 2);

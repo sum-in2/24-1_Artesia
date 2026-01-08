@@ -78,7 +78,7 @@ public class MapGenerator : MonoBehaviour
         GenerateRoad(root, 0);
         GenerateWall();
 
-        // EnemySpawner.instance.ActiveFromPool();
+        EnemySpawner.instance.ActiveFromPool();
     }
 
     Node initMember(Node root)
