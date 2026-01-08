@@ -14,7 +14,7 @@ public class MapGenerator : MonoBehaviour
     [SerializeField] int maxDepth;
     Node StartRoom;
     Vector3Int startPos;
-    public int[,] TileInfoArray { get; private set; }
+    [SerializeField] public int[,] TileInfoArray { get; private set; }
     public Vector3Int stairPos { get; private set; }
     public List<Node> rooms { get; private set; }
 

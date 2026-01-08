@@ -132,6 +132,7 @@ GameObject:
   m_Component:
   - component: {fileID: 281078407}
   - component: {fileID: 281078406}
+  - component: {fileID: 281078408}
   m_Layer: 0
   m_Name: MapGen
   m_TagString: Untagged
@@ -155,6 +156,7 @@ MonoBehaviour:
   minDevideRate: 0.3
   maxDevideRate: 0.7
   maxDepth: 3
+  playerPrefab: {fileID: 7839670640441207811, guid: c91fb9891efab8149a464a6955fe62ce, type: 3}
   maxRoomSize: {x: 7, y: 7}
 --- !u!4 &281078407
 Transform:
@@ -171,6 +173,22 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &281078408
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 281078405}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10026b0aa396b994a94a59d3f12d1f6d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  monsterPrefabs:
+  - {fileID: 588572217319687724, guid: 8c8fb3e45e4503d4dbd5a0a4293b6689, type: 3}
+  monstersPerRoom: 3
+  spawnOffset: 0.5
 --- !u!1 &353472735
 GameObject:
   m_ObjectHideFlags: 0

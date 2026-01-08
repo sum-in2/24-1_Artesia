@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 using Random = UnityEngine.Random;
+using UnityEngine.Events;
 
 public class TestMapGenerator : MonoBehaviour
 {
@@ -12,6 +14,7 @@ public class TestMapGenerator : MonoBehaviour
     [SerializeField] float minDevideRate;
     [SerializeField] float maxDevideRate;
     [SerializeField] int maxDepth;
+    [SerializeField] private GameObject playerPrefab;
     Node StartRoom;
     Vector3Int startPos;
     public int[,] TileInfoArray { get; private set; }
@@ -49,8 +52,13 @@ public class TestMapGenerator : MonoBehaviour
 
     int StartDepth;
     int StairDepth;
+    public GameObject player;
 
     [SerializeField] Vector2Int maxRoomSize;
+
+    public event UnityAction OnMapGenerated;
+    public void OnMapGeneratedInvoke() => OnMapGenerated?.Invoke();
+
 
     void Awake()
     {
@@ -69,6 +77,9 @@ public class TestMapGenerator : MonoBehaviour
 
     public void InitMap()
     {
+        if (player != null)
+            Destroy(player);
+
         Node root = null;
         root = initMember(root);
 
@@ -78,7 +89,16 @@ public class TestMapGenerator : MonoBehaviour
         GenerateRoad(root, 0);
         GenerateWall();
 
-        // EnemySpawner.instance.ActiveFromPool();
+        Vector3 spawnPos = new Vector3(startPos.x, startPos.y, 0);
+        player = Instantiate(playerPrefab, spawnPos, Quaternion.identity);
+
+        TestMobSpawn monsterSpawner = FindObjectOfType<TestMobSpawn>();
+        if (monsterSpawner != null)
+        {
+            monsterSpawner.SpawnMonstersInRooms();
+        }
+
+        OnMapGeneratedInvoke();
     }
 
     Node initMember(Node root)
@@ -278,6 +298,8 @@ public class TestMapGenerator : MonoBehaviour
     void OnDrawGizmos()
     {
         if (TileInfoArray == null) return;
+
+        // 맵 타일 표시
         for (int y = 0; y < mapSize.y; y++)
             for (int x = 0; x < mapSize.x; x++)
             {
@@ -292,33 +314,13 @@ public class TestMapGenerator : MonoBehaviour
                 Gizmos.DrawCube(new Vector3(x - mapSize.x / 2, y - mapSize.y / 2, 0),
                               Vector3.one * 0.8f);
             }
-    }
 
-    void DrawNodeDivideLine(Node node)
-    {
-        if (node.parNode == null) return; // 루트 노드는 제외
-        // 부모 노드와의 분할 위치 계산
-        RectInt parentRect = node.parNode.nodeRect;
-        Vector3Int worldPos = new Vector3Int(
-            (int)parentRect.center.x - mapSize.x / 2,
-            0,
-            (int)parentRect.center.y - mapSize.y / 2
-        );
-
+        // 플레이어 위치 표시
         Gizmos.color = Color.cyan;
-
-        if (parentRect.width > parentRect.height) // 가로 분할
-        {
-            Vector3 start = new Vector3(worldPos.x - parentRect.width / 2f, 0, worldPos.z);
-            Vector3 end = new Vector3(worldPos.x + parentRect.width / 2f, 0, worldPos.z);
-            Gizmos.DrawLine(start, end);
-        }
-        else // 세로 분할
-        {
-            Vector3 start = new Vector3(worldPos.x, 0, worldPos.z - parentRect.height / 2f);
-            Vector3 end = new Vector3(worldPos.x, 0, worldPos.z + parentRect.height / 2f);
-            Gizmos.DrawLine(start, end);
-        }
+        int posx = (int)player.transform.position.x + mapSize.x / 2;
+        int posy = (int)player.transform.position.y + mapSize.y / 2;
+        Gizmos.DrawCube(new Vector3(posx - mapSize.x / 2, posy - mapSize.y / 2, 0),
+                      Vector3.one * 0.7f);
     }
 }
 
