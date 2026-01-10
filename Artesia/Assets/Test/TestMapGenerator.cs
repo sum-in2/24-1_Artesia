@@ -55,6 +55,7 @@ public class TestMapGenerator : MonoBehaviour
     public GameObject player;
 
     [SerializeField] Vector2Int maxRoomSize;
+    Node gizmosTestNode;
 
     public event UnityAction OnMapGenerated;
     public void OnMapGeneratedInvoke() => OnMapGenerated?.Invoke();
@@ -97,6 +98,8 @@ public class TestMapGenerator : MonoBehaviour
         {
             monsterSpawner.SpawnMonstersInRooms();
         }
+
+        gizmosTestNode = root;
 
         OnMapGeneratedInvoke();
     }
@@ -323,6 +326,49 @@ public class TestMapGenerator : MonoBehaviour
         int posy = (int)player.transform.position.y + mapSize.y / 2;
         Gizmos.DrawCube(new Vector3(posx - mapSize.x / 2, posy - mapSize.y / 2, 0),
                       Vector3.one * 0.7f);
+
+        if (gizmosTestNode != null)
+        {
+            DrawNodeRooms(gizmosTestNode, 0);
+        }
+    }
+
+    private void DrawNodeRooms(Node node, int depth = 0)
+    {
+        if (node.nodeRect.width > 0 && node.nodeRect.height > 0)
+        {
+            DrawRoomRect(node.nodeRect, node.isLeaf, depth);
+        }
+
+        if (node.leftNode != null)
+            DrawNodeRooms(node.leftNode, depth + 1);
+        if (node.rightNode != null)
+            DrawNodeRooms(node.rightNode, depth + 1);
+    }
+
+    private void DrawRoomRect(RectInt rect, bool isLeaf, int depth)
+    {
+        Debug.Log("Drawing Rect at Depth " + depth + ": " + rect);
+        Color[] levelColors = {
+        Color.yellow,    // 레벨 0 (루트)
+        Color.cyan,      // 레벨 1
+        Color.magenta,   // 레벨 2
+        Color.red,       // 레벨 3
+        };
+
+        rect = new RectInt(
+            rect.x - mapSize.x / 2,
+            rect.y - mapSize.y / 2 + 25,
+            rect.width,
+            rect.height
+        );
+
+        Color color = depth < levelColors.Length ? levelColors[depth] : Color.white;
+
+        Gizmos.color = color;
+        Vector3 center = new Vector3(rect.center.x, rect.center.y, 0);
+        Vector3 size = new Vector3(rect.width - depth * 1f, rect.height - depth * 1f, 0.1f);
+        Gizmos.DrawWireCube(center, size);
     }
 }
 
