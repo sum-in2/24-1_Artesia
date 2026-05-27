@@ -4,7 +4,7 @@ using TMPro;
 using Unity.Mathematics;
 using UnityEngine;
 
-public class UIManager : MonoBehaviour
+public class UIManager : MonoBehaviour, IUIDamageNotifier
 {
     [SerializeField] CanvasGroup LoadingCanvas;
     public bool isFade { get; private set; } = false;
@@ -45,7 +45,15 @@ public class UIManager : MonoBehaviour
         DicUi.Add("Status", statusUI);
         DicUi.Add("escape", escapeUI);
         DicUi.Add("option", optionUI);
+
+        // ServiceLocator에 등록
+        ServiceLocator.Register<IUIDamageNotifier>(this);
     }
+
+    // ── IUIDamageNotifier 구현 ────────────────────────────────
+    public void ShowDamage(GameObject target, int damage) => hit(target, damage);
+    public void ShowGameOver() => ShowGameOverUI();
+    // ─────────────────────────────────────────────────────────
 
     public void SetActiveUI(string UIName, bool bActive)
     {
@@ -66,12 +74,9 @@ public class UIManager : MonoBehaviour
 
     private void DialogOff()
     {
-        Canvas dialogCanvas = BattleManager.Instance.dialogCanvas;
-
-        if (dialogCanvas.gameObject.activeSelf)
-        {
+        Canvas dialogCanvas = BattleManager.Instance?.dialogCanvas;
+        if (dialogCanvas != null && dialogCanvas.gameObject.activeSelf)
             dialogCanvas.gameObject.SetActive(false);
-        }
     }
 
     public void ShowGameOverUI()

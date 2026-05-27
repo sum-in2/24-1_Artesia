@@ -43,6 +43,12 @@ public class PlayerController : MonoBehaviour, ITurn
     private Vector2 _runDir = Vector2.zero;
     // ────────────────────────────────────────────────────
 
+    // ── 입력 버퍼 ────────────────────────────────────────
+    // 애니메이션 중이거나 적 턴 대기 중에 눌린 방향 입력을 보관.
+    // 행동 가능 상태가 되면 즉시 소비합니다.
+    private Vector2 _pendingInput = Vector2.zero;
+    // ────────────────────────────────────────────────────
+
     private void Awake()
     {
         IState<PlayerController> idle = new PlayerIdle();
@@ -65,7 +71,7 @@ public class PlayerController : MonoBehaviour, ITurn
         DontDestroyOnLoad(gameObject);
         if (GameObject.FindGameObjectsWithTag("Player").Length > 1)
             Destroy(gameObject);
-        UIManager.instance.SetActiveUI("Status", true);
+        UIManager.instance?.SetActiveUI("Status", true);
     }
 
     private void OnEnable()
@@ -106,7 +112,7 @@ public class PlayerController : MonoBehaviour, ITurn
         SM.DoOperateUpdate();
     }
 
-    // Shift 키 상태를 매 프레임 체크하고, 달리기 자동이동을 처리
+    // Shift 키 상태를 매 프레임 체크하고, 달리기/입력버퍼 자동이동을 처리
     private void UpdateRunInput()
     {
         bool shiftNow = Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed;
@@ -119,10 +125,24 @@ public class PlayerController : MonoBehaviour, ITurn
                 StopRun(); // Shift 뗐으면 달리기 중단
         }
 
-        // 자동 달리기: 턴이 돌아왔고, 달리기 방향이 있고, Idle 상태일 때
-        if (_isRunHeld && _runDir != Vector2.zero
-            && !PlayedTurn && SM.CurState == dicState[PlayerState.Idle]
-            && !UIManager.instance.isFade)
+        bool canAct = !PlayedTurn
+                      && SM.CurState == dicState[PlayerState.Idle]
+                      && !(UIManager.instance?.isFade ?? false);
+
+        if (!canAct) return;
+
+        // 우선순위 1: 버퍼된 입력 소비
+        // (애니메이션 중 또는 적 턴 대기 중에 눌렸던 방향키)
+        if (_pendingInput != Vector2.zero)
+        {
+            Vector2 pending = _pendingInput;
+            _pendingInput = Vector2.zero;
+            TryMove(pending);
+            return;
+        }
+
+        // 우선순위 2: 달리기 자동 이동
+        if (_isRunHeld && _runDir != Vector2.zero)
         {
             TryMove(_runDir);
         }
@@ -132,7 +152,17 @@ public class PlayerController : MonoBehaviour, ITurn
     private void StopRun()
     {
         _runDir = Vector2.zero;
-        TurnManager.instance?.SetRunMode(false);
+        ServiceLocator.Get<ITurnSystem>().SetRunMode(false);
+    }
+
+    /// <summary>
+    /// State 클래스(PlayerMove/PlayerAtk/PlayerSkill)가
+    /// 행동 완료를 알릴 때 호출합니다.
+    /// State는 TurnManager를 모르고, Controller를 통해 ServiceLocator로 위임합니다.
+    /// </summary>
+    public void NotifyActionComplete()
+    {
+        ServiceLocator.Get<ITurnSystem>().EndPlayerTurn();
     }
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
@@ -158,16 +188,29 @@ public class PlayerController : MonoBehaviour, ITurn
     {
         Vector2 input = value.Get<Vector2>();
 
-        // 방향키를 누른 방향을 달리기 방향으로 기억 (Shift와 무관하게 항상 갱신)
         if (input != Vector2.zero)
-            _runDir = input;
-        else
-            _runDir = Vector2.zero; // 방향키를 뗐으면 달리기 방향도 초기화
-
-        if (!PlayedTurn && !UIManager.instance.isFade)
         {
-            if (input != Vector2.zero && SM.CurState == dicState[PlayerState.Idle])
+            _runDir = input; // 달리기 방향 갱신 (항상)
+
+            if (SM.CurState == dicState[PlayerState.Idle]
+                && !PlayedTurn
+                && !(UIManager.instance?.isFade ?? false))
+            {
+                // 즉시 이동 가능한 상태
                 TryMove(input);
+            }
+            else
+            {
+                // 애니메이션 중이거나 적 턴 대기 중이면 버퍼에 저장
+                // → UpdateRunInput에서 행동 가능 시점에 소비됨
+                _pendingInput = input;
+            }
+        }
+        else
+        {
+            // 방향키를 뗐으면 달리기/버퍼 모두 초기화
+            _runDir = Vector2.zero;
+            _pendingInput = Vector2.zero;
         }
     }
 
@@ -187,7 +230,7 @@ public class PlayerController : MonoBehaviour, ITurn
 
             // 달리기 중이면 몬스터 속도 배율 활성화
             if (_isRunHeld)
-                TurnManager.instance?.SetRunMode(true);
+                ServiceLocator.Get<ITurnSystem>().SetRunMode(true);
 
             SM.SetState(dicState[PlayerState.Move]);
         }
@@ -200,7 +243,8 @@ public class PlayerController : MonoBehaviour, ITurn
 
     void OnSkill(InputValue value)
     {
-        if (!PlayedTurn && SM.CurState == dicState[PlayerState.Idle] && !UIManager.instance.isFade)
+        if (!PlayedTurn && SM.CurState == dicState[PlayerState.Idle]
+            && !(UIManager.instance?.isFade ?? false))
         {
             SM.SetState(dicState[PlayerState.Skill]);
             isSkillActive = true;
@@ -209,15 +253,16 @@ public class PlayerController : MonoBehaviour, ITurn
 
     void OnOption(InputValue value)
     {
-        UIManager.instance.SetActiveUI("option", true);
+        UIManager.instance?.SetActiveUI("option", true);
         if (SceneManager.GetActiveScene().name != "BaseCamp")
-            UIManager.instance.SetActiveUI("escape", true);
+            UIManager.instance?.SetActiveUI("escape", true);
         Time.timeScale = 0f;
     }
 
     void OnAtk(InputValue value)
     {
-        if (!PlayedTurn && SM.CurState == dicState[PlayerState.Idle] && !UIManager.instance.isFade)
+        if (!PlayedTurn && SM.CurState == dicState[PlayerState.Idle]
+            && !(UIManager.instance?.isFade ?? false))
         {
             EnemyHit = true;
             SM.SetState(dicState[PlayerState.Atk]);

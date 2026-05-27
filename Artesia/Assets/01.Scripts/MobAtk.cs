@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class MobAtk : IState<MobController>
@@ -20,13 +18,15 @@ public class MobAtk : IState<MobController>
         m_Dir = sender.Dir;
         m_OriPos = sender.transform.position;
 
-        // 달리기 중이면 SpeedMultiplier 만큼 공격 애니메이션도 단축
-        float multiplier = TurnManager.instance != null ? TurnManager.instance.SpeedMultiplier : 1f;
+        // SpeedMultiplier: 달리기 모드면 공격 애니메이션도 빠르게
+        // ITurnSystem을 통해 접근 — TurnManager 직접 참조 제거
+        float multiplier = ServiceLocator.Get<ITurnSystem>().SpeedMultiplier;
         AtkSpeed = (sender.speed / 2f) / multiplier;
 
         elapsedTime += Time.deltaTime;
         m_mobController.transform.position = Vector2.Lerp(sender.transform.position, m_targetPos, elapsedTime / AtkSpeed);
     }
+
     public void OperateUpdate(MobController sender)
     {
         Vector2 nowPos = m_mobController.transform.position;
@@ -34,16 +34,19 @@ public class MobAtk : IState<MobController>
 
         elapsedTime += Time.deltaTime;
         if (elapsedTime >= AtkSpeed)
-        { // 한번 도달하면 되돌아오게
+        {
             m_mobController.transform.position = m_targetPos;
             m_targetPos = m_OriPos;
             elapsedTime = 0;
         }
     }
+
     public void OperateExit(MobController sender)
     {
         m_mobController.transform.position = m_OriPos;
         elapsedTime = 0;
-        TurnManager.instance.setTurn(sender.gameObject, true);
+
+        // Controller를 통해 행동 완료 알림 — TurnManager 직접 참조 제거
+        sender.OnActionComplete();
     }
 }

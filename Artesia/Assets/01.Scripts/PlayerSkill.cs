@@ -1,7 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
-using System.ComponentModel.Design;
-using System.Security.Cryptography;
 using UnityEngine;
 
 public class PlayerSkill : IState<PlayerController>
@@ -19,24 +15,28 @@ public class PlayerSkill : IState<PlayerController>
         if (!m_playerController)
             m_playerController = sender;
 
-        // 스킬 정보 초기화 ex) 대미지, 범위, 딜레이, 이펙트(이름으로 호출할거니까?)
-
-        BattleManager.Instance.AddLogMessage($"레이나 {skillName} 사용!"); // 스킬이름 추가해야할듯
+        // IBattleLog를 통해 로그 출력 — BattleManager 직접 참조 제거
+        ServiceLocator.Get<IBattleLog>().AddLog($"레이나 {skillName} 사용!");
 
         ActivateSkill();
         delayTimer = 0f;
+
+        // 스킬 효과가 즉시 적용됐으므로 즉시 턴 종료
+        sender.NotifyActionComplete();
     }
+
     public void OperateUpdate(PlayerController sender)
     {
         delayTimer += Time.deltaTime;
         if (delayTimer >= skillDelay)
-        { // 이펙트 딜레이 대기해야함 일단은 제외
+        {
             sender.isSkillActive = false;
         }
     }
+
     public void OperateExit(PlayerController sender)
     {
-        TurnManager.instance.EndPlayerTurn();
+        // TurnManager 직접 참조 제거 — NotifyActionComplete가 Enter에서 이미 처리
     }
 
     private void ActivateSkill()
@@ -51,5 +51,4 @@ public class PlayerSkill : IState<PlayerController>
             }
         }
     }
-
 }

@@ -1,6 +1,4 @@
-using System.Collections;
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class PlayerAtk : IState<PlayerController>
@@ -22,13 +20,17 @@ public class PlayerAtk : IState<PlayerController>
 
         atkCenter = (Vector2)sender.transform.position + m_Dir * 0.5f;
 
-        if (BattleManager.Instance != null)
-            BattleManager.Instance.AddLogMessage($"레이나 일반공격 사용!");
+        // IBattleLog를 통해 로그 출력 — BattleManager 직접 참조 제거
+        ServiceLocator.Get<IBattleLog>().AddLog("레이나 일반공격 사용!");
 
         normalAtk();
 
         elapsedTime += Time.deltaTime;
+
+        // 데미지가 이미 적용됐으므로 즉시 턴 종료
+        sender.NotifyActionComplete();
     }
+
     public void OperateUpdate(PlayerController sender)
     {
         elapsedTime += Time.deltaTime;
@@ -37,10 +39,11 @@ public class PlayerAtk : IState<PlayerController>
             sender.EnemyHit = false;
         }
     }
+
     public void OperateExit(PlayerController sender)
     {
         elapsedTime = 0;
-        TurnManager.instance.EndPlayerTurn();
+        // TurnManager 직접 참조 제거 — NotifyActionComplete가 Enter에서 이미 처리
     }
 
     void normalAtk()
@@ -60,7 +63,7 @@ public class PlayerAtk : IState<PlayerController>
     void initStat()
     {
         m_Dir = m_playerController.Dir;
-        AtkSpeed = m_playerController.speed / 2f; // 수치는 애니메이션 뽑히는거 보고 바뀌지 않을지. / 아니면 애니메이터에서 관리?
+        AtkSpeed = m_playerController.speed / 2f;
         atkDamage = m_playerController.GetComponent<PlayerStat>().Atk;
     }
 }

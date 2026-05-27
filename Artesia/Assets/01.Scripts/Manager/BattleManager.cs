@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-public class BattleManager : MonoBehaviour
+public class BattleManager : MonoBehaviour, IBattleLog
 {
     public static BattleManager Instance { get; private set; }
     public TMP_Text battleLogText;
@@ -22,6 +22,9 @@ public class BattleManager : MonoBehaviour
             Instance = this;
         else
             Destroy(gameObject);
+
+        // ServiceLocator에 등록
+        ServiceLocator.Register<IBattleLog>(this);
     }
 
     private void Start()
@@ -42,6 +45,9 @@ public class BattleManager : MonoBehaviour
         isBattleActive = true;
         dialogCanvas.gameObject.SetActive(true);
     }
+
+    // IBattleLog 구현 — 기존 AddLogMessage를 인터페이스 메서드로 노출
+    public void AddLog(string message) => AddLogMessage(message);
 
     public void AddLogMessage(string message)
     {

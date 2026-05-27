@@ -3,7 +3,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine;
 using System;
 
-public class TurnManager : MonoBehaviour
+public class TurnManager : MonoBehaviour, ITurnSystem
 {
     GameObject Player;
     public int spawnTurn = 8;
@@ -12,22 +12,36 @@ public class TurnManager : MonoBehaviour
     static TurnManager Instance;
     public static TurnManager instance
     {
-        get
-        {
-            return Instance;
-        }
+        get { return Instance; }
     }
     String sceneName;
-
     int TurnCnt;
 
-    // 달리기 모드일 때 몬스터 애니메이션 속도를 빠르게 (1 = 기본, 2 = 2배속)
+    // ── ITurnSystem ───────────────────────────────────────────
+    /// <summary>달리기 모드일 때 몬스터 애니메이션 배속 (기본 1, 달리기 2)</summary>
     public float SpeedMultiplier { get; private set; } = 1f;
 
     public void SetRunMode(bool running)
     {
         SpeedMultiplier = running ? 2f : 1f;
     }
+
+    public void EndPlayerTurn()
+    {
+        Player.GetComponent<ITurn>().PlayedTurn = true;
+        if (sceneName != "BaseCamp")
+            EnemyNextTurn();
+    }
+
+    public void SetTurn(GameObject obj, bool played)
+    {
+        ITurn TurnTemp = obj.GetComponent<ITurn>();
+        if (TurnTemp != null)
+            TurnTemp.PlayedTurn = played;
+        else
+            Debug.Log("ITurn 상속받지 않은 오브젝트 : " + obj.name);
+    }
+    // ─────────────────────────────────────────────────────────
 
     void Awake()
     {
@@ -38,6 +52,9 @@ public class TurnManager : MonoBehaviour
 
         TurnCnt = 0;
         sceneName = SceneManager.GetActiveScene().name;
+
+        // ServiceLocator에 등록 — State/Stat 클래스들이 이 인터페이스로 접근
+        ServiceLocator.Register<ITurnSystem>(this);
     }
 
     private void Start()
@@ -51,7 +68,7 @@ public class TurnManager : MonoBehaviour
     private void Update()
     {
         if (CheckUnitTurn())
-            setTurn(Player, false);
+            SetTurn(Player, false);
 
         if (TurnCnt > spawnTurn && MobList != null)
         {
@@ -60,32 +77,20 @@ public class TurnManager : MonoBehaviour
         }
     }
 
-    public void EndPlayerTurn()
-    {
-        Player.GetComponent<ITurn>().PlayedTurn = true;
-        if (sceneName != "BaseCamp")
-            EnemyNextTurn();
-    }
-
     void EnemyNextTurn()
     {
+        // 플레이어의 '논리적 위치'(TargetPos)로 경로 계산
+        // → EndPlayerTurn이 OperateEnter에서 호출되므로
+        //   transform.position은 아직 이전 칸이지만 TargetPos는 이미 다음 칸을 가리킴
+        PlayerController pc = Player.GetComponent<PlayerController>();
+        Vector2 playerLogical = pc != null ? pc.TargetPos : (Vector2)Player.transform.position;
+
         foreach (GameObject Obj in MobList)
         {
-            setTurn(Obj, false);
-            EnemySpawner.instance.updatePath(Obj, Player.transform.position);
+            SetTurn(Obj, false);
+            EnemySpawner.instance.updatePath(Obj, playerLogical);
         }
         TurnCnt++;
-    }
-
-    public void setTurn(GameObject obj, bool input)
-    {
-        ITurn TurnTemp = obj.GetComponent<ITurn>();
-        if (TurnTemp != null)
-        {
-            TurnTemp.PlayedTurn = input;
-        }
-        else
-            Debug.Log("ITurn 상속받지 않은 오브젝트 : " + obj.name);
     }
 
     bool CheckUnitTurn()
@@ -94,15 +99,8 @@ public class TurnManager : MonoBehaviour
         {
             foreach (GameObject Obj in MobList)
             {
-                if (!Obj.activeSelf)
-                {
-                    continue;
-                }
-
-                if (!Obj.GetComponent<ITurn>().PlayedTurn)
-                {
-                    return false;
-                }
+                if (!Obj.activeSelf) continue;
+                if (!Obj.GetComponent<ITurn>().PlayedTurn) return false;
             }
         }
         return true;

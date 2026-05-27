@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class EnemySpawner : MonoBehaviour
+public class EnemySpawner : MonoBehaviour, IEnemyRegistry
 {
     static EnemySpawner m_instance;
     [SerializeField] GameObject enemyPrefab;
@@ -40,7 +40,13 @@ public class EnemySpawner : MonoBehaviour
         Enemies = new List<GameObject>();
         enemyPool = new List<GameObject>();
         AddEnemyToPool(enemyPrefab, poolSize);
+
+        // ServiceLocator에 등록
+        ServiceLocator.Register<IEnemyRegistry>(this);
     }
+
+    // IEnemyRegistry 구현
+    public void KillEnemy(GameObject enemy) => killEnemy(enemy);
 
     void Start()
     {

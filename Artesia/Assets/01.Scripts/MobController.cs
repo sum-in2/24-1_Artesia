@@ -49,6 +49,16 @@ public class MobController : MonoBehaviour, ITurn
         SM.SetState(dicState[MobState.Idle]);
     }
 
+    /// <summary>
+    /// State 클래스가 행동 완료를 알릴 때 호출합니다.
+    /// Controller가 ServiceLocator를 통해 TurnSystem에 알리므로
+    /// State는 TurnManager를 직접 알 필요가 없습니다.
+    /// </summary>
+    public void OnActionComplete()
+    {
+        ServiceLocator.Get<ITurnSystem>().SetTurn(gameObject, true);
+    }
+
     public void setListPath(Vector3 PlayerPos)
     {
         toPlayerPath = gameObject.GetComponent<AStarPathfinder>().StartPathfinding(transform.position, PlayerPos);

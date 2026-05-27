@@ -1,6 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEditor;
 using UnityEngine;
 
 public class MobMove : IState<MobController>
@@ -16,11 +13,13 @@ public class MobMove : IState<MobController>
             m_mobController = sender;
         elapsedTime = 0;
 
-        // 달리기 중이면 SpeedMultiplier 만큼 애니메이션 시간을 단축
-        float multiplier = TurnManager.instance != null ? TurnManager.instance.SpeedMultiplier : 1f;
+        // SpeedMultiplier: 달리기 모드면 적 애니메이션도 빠르게
+        // ITurnSystem을 통해 접근 — TurnManager 직접 참조 제거
+        float multiplier = ServiceLocator.Get<ITurnSystem>().SpeedMultiplier;
         m_speed = m_mobController.speed / multiplier;
         m_targetPos = m_mobController.TargetPos;
     }
+
     public void OperateUpdate(MobController sender)
     {
         Vector3 nowPos = m_mobController.transform.position;
@@ -31,10 +30,12 @@ public class MobMove : IState<MobController>
             m_mobController.transform.position = m_targetPos;
         }
     }
+
     public void OperateExit(MobController sender)
     {
         m_mobController.transform.position = m_targetPos;
-        TurnManager.instance.setTurn(sender.gameObject, true);
-    }
 
+        // Controller를 통해 행동 완료 알림 — TurnManager 직접 참조 제거
+        sender.OnActionComplete();
+    }
 }
