@@ -16,7 +16,9 @@ public class MobMove : IState<MobController>
             m_mobController = sender;
         elapsedTime = 0;
 
-        m_speed = m_mobController.speed;
+        // 달리기 중이면 SpeedMultiplier 만큼 애니메이션 시간을 단축
+        float multiplier = TurnManager.instance != null ? TurnManager.instance.SpeedMultiplier : 1f;
+        m_speed = m_mobController.speed / multiplier;
         m_targetPos = m_mobController.TargetPos;
     }
     public void OperateUpdate(MobController sender)

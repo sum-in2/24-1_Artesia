@@ -348,7 +348,6 @@ public class TestMapGenerator : MonoBehaviour
 
     private void DrawRoomRect(RectInt rect, bool isLeaf, int depth)
     {
-        Debug.Log("Drawing Rect at Depth " + depth + ": " + rect);
         Color[] levelColors = {
         Color.yellow,    // 레벨 0 (루트)
         Color.cyan,      // 레벨 1

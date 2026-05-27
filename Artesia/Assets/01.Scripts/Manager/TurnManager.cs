@@ -21,6 +21,14 @@ public class TurnManager : MonoBehaviour
 
     int TurnCnt;
 
+    // 달리기 모드일 때 몬스터 애니메이션 속도를 빠르게 (1 = 기본, 2 = 2배속)
+    public float SpeedMultiplier { get; private set; } = 1f;
+
+    public void SetRunMode(bool running)
+    {
+        SpeedMultiplier = running ? 2f : 1f;
+    }
+
     void Awake()
     {
         if (Instance == null)

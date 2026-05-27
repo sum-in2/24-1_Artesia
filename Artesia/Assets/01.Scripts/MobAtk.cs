@@ -19,7 +19,10 @@ public class MobAtk : IState<MobController>
         m_targetPos = sender.TargetPos;
         m_Dir = sender.Dir;
         m_OriPos = sender.transform.position;
-        AtkSpeed = sender.speed / 2f;
+
+        // 달리기 중이면 SpeedMultiplier 만큼 공격 애니메이션도 단축
+        float multiplier = TurnManager.instance != null ? TurnManager.instance.SpeedMultiplier : 1f;
+        AtkSpeed = (sender.speed / 2f) / multiplier;
 
         elapsedTime += Time.deltaTime;
         m_mobController.transform.position = Vector2.Lerp(sender.transform.position, m_targetPos, elapsedTime / AtkSpeed);

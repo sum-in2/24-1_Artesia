@@ -36,6 +36,13 @@ public class PlayerController : MonoBehaviour, ITurn
 
     public string destroySceneName;
 
+    // ── 달리기 관련 ──────────────────────────────────────
+    // Shift 키를 누르고 있는 동안 달리기 모드
+    private bool _isRunHeld = false;
+    // 달리기 중 자동으로 이동할 방향 (마지막으로 누른 방향키)
+    private Vector2 _runDir = Vector2.zero;
+    // ────────────────────────────────────────────────────
+
     private void Awake()
     {
         IState<PlayerController> idle = new PlayerIdle();
@@ -92,7 +99,40 @@ public class PlayerController : MonoBehaviour, ITurn
             gameObject.GetComponent<SpriteRenderer>().flipX = (Dir.x == 1);
         }
 
+        // ── 달리기 처리 ──────────────────────────────────
+        UpdateRunInput();
+        // ─────────────────────────────────────────────────
+
         SM.DoOperateUpdate();
+    }
+
+    // Shift 키 상태를 매 프레임 체크하고, 달리기 자동이동을 처리
+    private void UpdateRunInput()
+    {
+        bool shiftNow = Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed;
+
+        // Shift 상태가 바뀌었을 때만 처리
+        if (shiftNow != _isRunHeld)
+        {
+            _isRunHeld = shiftNow;
+            if (!_isRunHeld)
+                StopRun(); // Shift 뗐으면 달리기 중단
+        }
+
+        // 자동 달리기: 턴이 돌아왔고, 달리기 방향이 있고, Idle 상태일 때
+        if (_isRunHeld && _runDir != Vector2.zero
+            && !PlayedTurn && SM.CurState == dicState[PlayerState.Idle]
+            && !UIManager.instance.isFade)
+        {
+            TryMove(_runDir);
+        }
+    }
+
+    // 달리기 중단: 방향 초기화 + 몬스터 속도 배율 복원
+    private void StopRun()
+    {
+        _runDir = Vector2.zero;
+        TurnManager.instance?.SetRunMode(false);
     }
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
@@ -116,23 +156,45 @@ public class PlayerController : MonoBehaviour, ITurn
 
     void OnMove(InputValue value)
     {
+        Vector2 input = value.Get<Vector2>();
+
+        // 방향키를 누른 방향을 달리기 방향으로 기억 (Shift와 무관하게 항상 갱신)
+        if (input != Vector2.zero)
+            _runDir = input;
+        else
+            _runDir = Vector2.zero; // 방향키를 뗐으면 달리기 방향도 초기화
+
         if (!PlayedTurn && !UIManager.instance.isFade)
         {
-            Vector2 input = value.Get<Vector2>();
             if (input != Vector2.zero && SM.CurState == dicState[PlayerState.Idle])
-            { //
-                DirControl(input);
-                Vector3Int OriPos = new Vector3Int((int)transform.position.x, (int)transform.position.y, 0);
-                RaycastHit2D hit = Physics2D.Raycast((Vector2Int)OriPos, input, 1, LayerMask.GetMask("Tile") | LayerMask.GetMask("Enemy"));
+                TryMove(input);
+        }
+    }
 
-                if (!hit)
-                {
-                    TargetPos = OriPos + new Vector3(Dir.x, Dir.y, 0);
+    // OnMove와 자동달리기 양쪽에서 공통으로 사용하는 이동 시도 로직
+    private void TryMove(Vector2 input)
+    {
+        DirControl(input);
+        Vector3Int currentPosInt = new Vector3Int((int)transform.position.x, (int)transform.position.y, 0);
+        RaycastHit2D hit = Physics2D.Raycast(
+            (Vector2Int)currentPosInt, input, 1,
+            LayerMask.GetMask("Tile") | LayerMask.GetMask("Enemy")
+        );
 
-                    SM.SetState(dicState[PlayerState.Move]);
-                }
-            }
+        if (!hit)
+        {
+            TargetPos = currentPosInt + new Vector3(Dir.x, Dir.y, 0);
 
+            // 달리기 중이면 몬스터 속도 배율 활성화
+            if (_isRunHeld)
+                TurnManager.instance?.SetRunMode(true);
+
+            SM.SetState(dicState[PlayerState.Move]);
+        }
+        else if (_isRunHeld)
+        {
+            // 달리는 중 벽이나 적에 막히면 달리기 중단
+            StopRun();
         }
     }
 
