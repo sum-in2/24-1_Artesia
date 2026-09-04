@@ -21,6 +21,27 @@ Artesia는 매번 다르게 생성되는 던전을 탐험하며 미지의 비밀
 
 ---
 
+## 한눈에 보는 턴 루프
+
+매 프레임 모든 몬스터가 자기 턴을 마쳤는지 확인해서 플레이어 턴을 다시 열어주는, 이 프로젝트의 가장 기본적인 순환입니다.
+
+```csharp
+void Update()
+{
+    if (CheckUnitTurn())
+        SetTurn(Player, false);   // 모든 몬스터가 턴을 마치면 플레이어 턴 개방
+
+    if (TurnCnt > spawnTurn && MobList != null)
+    {
+        EnemySpawner.instance.RandomSpawnEnemy();
+        TurnCnt = 0;
+    }
+}
+```
+`TurnManager.cs`
+
+---
+
 ## 핵심 기능
 
 - **절차적 던전 생성** — BSP 알고리즘으로 매 플레이마다 새로운 맵 구조 생성
@@ -39,6 +60,71 @@ Artesia는 매번 다르게 생성되는 던전을 탐험하며 미지의 비밀
 | 언어 | C# |
 | 맵 생성 | BSP (Binary Space Partitioning) Algorithm |
 | 경로 탐색 | A* Pathfinding |
+
+---
+
+## 핵심 기술 구현
+
+### 1. ServiceLocator + Null Object — Manager 간 직접 참조 제거
+
+`PlayerAtk`, `PlayerStat` 같은 상태/전투 로직이 `BattleManager`, `UIManager`를 직접 참조하면 씬 구성이 바뀔 때마다 참조가 깨지고, Manager 없는 테스트 씬에서는 곧바로 NullReferenceException이 났습니다. 인터페이스(`IBattleLog`, `IUIDamageNotifier` 등)로 등록·조회하는 경량 ServiceLocator를 두고, 서비스가 없으면 Null 구현체로 폴백하도록 했습니다.
+
+```csharp
+public static T Get<T>() where T : class
+{
+    if (_registry.TryGetValue(typeof(T), out var service))
+        return service as T;
+
+    // 등록된 서비스가 없으면 Null 구현체로 폴백 (테스트 씬 등에서 에러 방지)
+    return GetNullImplementation<T>();
+}
+```
+`ServiceLocator.cs`
+
+### 2. 제네릭 `StateMachine<T>` — Player/Mob 공통 상태 전이
+
+플레이어(Idle/Move/Atk/Skill)와 몬스터(Idle/Move/Atk)는 상태 종류는 다르지만 전이 흐름(Exit → 교체 → Enter)은 동일합니다. 대상 타입을 제네릭으로 받는 하나의 상태 머신으로 양쪽 다 처리해 중복 구현을 없앴습니다.
+
+```csharp
+public void SetState(IState<T> state)
+{
+    if (m_sender == null || CurState == state) return;
+
+    CurState?.OperateExit(m_sender);
+    CurState = state;
+    CurState?.OperateEnter(m_sender);
+}
+```
+`StateMachine.cs`
+
+### 3. BSP 기반 절차적 던전 생성
+
+매 플레이마다 다른 구조의 던전을 만들기 위해, 맵 영역을 이진 트리로 재귀 분할(BSP)하고 리프 노드마다 방을 배치합니다. `maxDepth`로 방 개수를, 분할 비율 범위로 방 크기의 편차를 조절합니다.
+
+```csharp
+void Divide(Node Tree, int n)
+{
+    if (n == maxDepth) { rooms.Add(Tree); return; }
+
+    int maxLength = Mathf.Max(Tree.nodeRect.width, Tree.nodeRect.height);
+    int split = Mathf.RoundToInt(Random.Range(maxLength * minDevideRate, maxLength * maxDevideRate));
+    // 긴 변을 기준으로 분할 후 양쪽을 재귀 호출
+}
+```
+`MapGenerator.cs`
+
+### 4. 논리적 좌표 vs 실제 좌표 — 턴제 이동 동기화 버그 수정
+
+플레이어가 이동 상태에 진입하면 `EndPlayerTurn()`이 즉시 호출되어 몬스터 경로를 다시 계산하는데, 이 시점의 `transform.position`은 아직 이전 칸이라 몬스터가 한 턴 늦게 쫓아오는 문제가 있었습니다. 실제 좌표 대신 이동이 이미 확정된 "논리적 목표 좌표"(`TargetPos`)를 기준으로 경로를 계산하도록 고쳤습니다.
+
+```csharp
+PlayerController pc = Player.GetComponent<PlayerController>();
+Vector2 playerLogical = pc != null ? pc.TargetPos : (Vector2)Player.transform.position;
+
+foreach (GameObject Obj in MobList)
+    EnemySpawner.instance.updatePath(Obj, playerLogical);
+```
+`TurnManager.cs`
 
 ---
 
