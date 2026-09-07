@@ -213,16 +213,34 @@ public class TestMapGenerator : MonoBehaviour
         {
             Tree.leftNode.roomRect = GenerateRoom(Tree.leftNode, n + 1);
             Tree.rightNode.roomRect = GenerateRoom(Tree.rightNode, n + 1);
-            rect = Tree.leftNode.roomRect;
+            // 왼쪽 자식 결과만 반환하면 상위 노드의 roomRect(center)가 재귀적으로
+            // "왼쪽으로만 내려간 리프"로 수렴해 항상 좌하단 쪽으로 쏠렸음.
+            // 좌우 자식을 모두 포함하는 bounding rect로 대체해 서브트리 전체를 대표하게 함.
+            rect = UnionRect(Tree.leftNode.roomRect, Tree.rightNode.roomRect);
         }
         return rect;
     }
 
+    // 두 RectInt를 모두 포함하는 최소 bounding rect
+    private RectInt UnionRect(RectInt a, RectInt b)
+    {
+        int xMin = Mathf.Min(a.xMin, b.xMin);
+        int yMin = Mathf.Min(a.yMin, b.yMin);
+        int xMax = Mathf.Max(a.xMax, b.xMax);
+        int yMax = Mathf.Max(a.yMax, b.yMax);
+        return new RectInt(xMin, yMin, xMax - xMin, yMax - yMin);
+    }
+
     private void GenerateRoad(Node Tree, int n)
     {
-        //TODO: 현재 방식은 좌 우 하위 노드만 연결하기 때문에 늘 하단에만 길이 생성되는 것으로 추정됨
-        //방 정보들 다 담아서 인접 방 랜덤 연결/이것도 최소 모든 방 순회 할 수 있는 방식으로 수정 필요
         if (n == maxDepth) return;
+
+        // 안전장치: 각 서브트리의 center가 실제로 자기 영역(nodeRect) 안에 있는지 검증.
+        // roomRect 전파가 다시 깨지면(예: 다른 곳에서 유사한 실수 반복) 여기서 즉시 드러남.
+        Debug.Assert(Tree.leftNode.nodeRect.Contains(Tree.leftNode.center),
+            $"[BSP] leftNode.center {Tree.leftNode.center} is outside its own partition {Tree.leftNode.nodeRect}");
+        Debug.Assert(Tree.rightNode.nodeRect.Contains(Tree.rightNode.center),
+            $"[BSP] rightNode.center {Tree.rightNode.center} is outside its own partition {Tree.rightNode.nodeRect}");
 
         Vector2Int currentCenter = new Vector2Int((Tree.leftNode.center.x + Tree.rightNode.center.x) / 2, (Tree.leftNode.center.y + Tree.rightNode.center.y) / 2);
 
